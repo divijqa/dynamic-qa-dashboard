@@ -1,8 +1,15 @@
 'use server'
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
-const prisma = new PrismaClient();
+const pool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/qa_analytics_db?schema=public" 
+});
+
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 // Interface matching our Prisma Metric schema structure
 export interface DashboardMetric {

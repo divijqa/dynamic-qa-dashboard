@@ -1,15 +1,25 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
+import 'dotenv/config';
 
-const prisma = new PrismaClient();
+// 1. Establish the native PostgreSQL connection pool configuration parameters
+const pool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/qa_analytics_db?schema=public" 
+});
+
+// 2. Wrap the database pool instance directly inside Prisma's driver adapter
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Initializing automated database seeding sequence...');
 
-  // 1. Clear out any existing historical metrics records to avoid key collisions
+  // 3. Clear out historical metadata entries to avoid key constraint errors
   await prisma.metric.deleteMany({});
   await prisma.user.deleteMany({});
 
-  // 2. Provision a core enterprise user entity profile record
+  // 4. Provision your core primary profile entity record
   const coreUser = await prisma.user.create({
     data: {
       email: 'divij.mothe@enterprise.qa',
@@ -20,7 +30,7 @@ async function main() {
 
   console.log(`👤 Baseline User profile mapped successfully: ${coreUser.email}`);
 
-  // 3. Inject realistic, high-utility test metrics data vectors
+  // 5. Inject realistic high-utility QA metric dataset arrays
   const metricPayloads = [
     { title: 'Total Selenium Suites Executed', value: 842.0 },
     { title: 'Mean API Latency Threshold (ms)', value: 34.5 },
@@ -48,5 +58,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
+    // 6. Safely disconnect the database socket streams
     await prisma.$disconnect();
+    await pool.end();
   });
