@@ -1,29 +1,20 @@
 import React from 'react';
+import { getDashboardMetrics } from '../actions'; // Import your secure Server Action
 
-interface MetricItem {
-  id: string;
-  title: string;
-  value: string;
-  change: string;
-  isPositive: boolean;
-}
-
-export default function DashboardHome() {
-  const sampleMetrics: MetricItem[] = [
-    { id: '1', title: 'Active Automations', value: '1,248', change: '+12%', isPositive: true },
-    { id: '2', title: 'API Response Time', value: '42ms', change: '-4%', isPositive: true },
-    { id: '3', title: 'System Error Rate', value: '0.04%', change: '+0.01%', isPositive: false },
-  ];
+export default async function DashboardHome() {
+  // 1. Automatically execute the server action directly during server-side rendering
+  const liveMetrics = await getDashboardMetrics();
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">Enterprise QA Analytics Dashboard</h1>
-        <p className="text-slate-4xl mt-2 text-slate-400">Monitoring real-time agentic loop states and telemetry data parameters.</p>
+        <p className="text-slate-400 mt-2">Monitoring real-time agentic loop states via type-safe Next.js Server Actions.</p>
       </header>
 
+      {/* Dynamic Visual Cards Component Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {sampleMetrics.map((metric) => (
+        {liveMetrics.map((metric) => (
           <div key={metric.id} className="bg-slate-800 border border-slate-700 p-6 rounded-xl shadow-lg">
             <h3 className="text-sm font-medium text-slate-400">{metric.title}</h3>
             <div className="flex items-baseline justify-between mt-4">
