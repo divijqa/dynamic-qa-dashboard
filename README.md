@@ -192,4 +192,4 @@ export default async function OverviewPage() {
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License] and [Apache License 2.0](LICENSE).
