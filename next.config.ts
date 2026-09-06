@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Explicitly instructs Next.js to scan your local project workspace context
+  experimental: {
+    turbo: {
+      root: "./",
+    },
+  },
 };
 
 export default nextConfig;
+

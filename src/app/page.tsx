@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDashboardMetrics } from '../actions'; // Import your secure Server Action
+import { getDashboardMetrics } from './actions'; // Import your secure Server Action
 
 export default async function DashboardHome() {
   // 1. Automatically execute the server action directly during server-side rendering
