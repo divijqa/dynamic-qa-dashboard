@@ -192,4 +192,4 @@ export default async function OverviewPage() {
 
 ## License
 
-_Add a license (MIT is a common default for portfolio projects) — none is currently set._
+This project is licensed under the [MIT License](LICENSE).
