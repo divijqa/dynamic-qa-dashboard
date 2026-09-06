@@ -1,36 +1,82 @@
-import React from 'react';
-import { getDashboardMetrics } from './actions'; // Import your secure Server Action
+import { KpiCard } from "@/components/kpi-card";
+import { TrendChart } from "@/components/trend-chart";
+import { getOverviewStats, getTrend, getRecentRuns } from "@/lib/queries";
 
-export default async function DashboardHome() {
-  // 1. Automatically execute the server action directly during server-side rendering
-  const liveMetrics = await getDashboardMetrics();
+function formatDuration(ms: number) {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
+}
+
+const STATUS_TONE = {
+  PASSED: "text-emerald-400",
+  FLAKY: "text-amber-400",
+  FAILED: "text-red-400",
+} as const;
+
+export default async function OverviewPage() {
+  const [stats, trend, recentRuns] = await Promise.all([
+    getOverviewStats(),
+    getTrend(),
+    getRecentRuns(),
+  ]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">Enterprise QA Analytics Dashboard</h1>
-        <p className="text-slate-400 mt-2">Monitoring real-time agentic loop states via type-safe Next.js Server Actions.</p>
-      </header>
-
-      {/* Dynamic Visual Cards Component Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {liveMetrics.map((metric) => (
-          <div key={metric.id} className="bg-slate-800 border border-slate-700 p-6 rounded-xl shadow-lg">
-            <h3 className="text-sm font-medium text-slate-400">{metric.title}</h3>
-            <div className="flex items-baseline justify-between mt-4">
-              <span className="text-3xl font-bold tracking-tight">{metric.value}</span>
-              <span className={`text-sm font-semibold rounded-full px-2 py-0.5 ${
-                metric.isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-              }`}>
-                {metric.change}
-              </span>
-            </div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-4 gap-3">
+        <KpiCard
+          label="Pass rate"
+          value={`${stats.passRate.toFixed(1)}%`}
+          tone="success"
+        />
+        <KpiCard
+          label="Flaky rate"
+          value={`${stats.flakyRate.toFixed(1)}%`}
+          tone="warning"
+        />
+        <KpiCard
+          label="Avg run time"
+          value={formatDuration(stats.avgDurationMs)}
+        />
+        <KpiCard
+          label="Open defects"
+          value={String(stats.openDefects)}
+          tone="danger"
+        />
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 h-64 flex items-center justify-center">
-        <p className="text-slate-400 font-mono">[ Dynamic Charts Layer - Hooked to Live Database Events ]</p>
+      <TrendChart data={trend} />
+
+      <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/10 text-neutral-400">
+              <th className="px-3 py-2 text-left font-normal">Suite</th>
+              <th className="px-3 py-2 text-left font-normal">Status</th>
+              <th className="px-3 py-2 text-left font-normal">Duration</th>
+              <th className="px-3 py-2 text-left font-normal">Run</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentRuns.map((run) => (
+              <tr key={run.id} className="border-b border-white/5 last:border-0">
+                <td className="px-3 py-2">{run.suite.name}</td>
+                <td className={`px-3 py-2 ${STATUS_TONE[run.status]}`}>
+                  {run.status === "PASSED"
+                    ? "Passed"
+                    : run.status === "FLAKY"
+                      ? "Flaky"
+                      : "Failed"}
+                </td>
+                <td className="px-3 py-2">{formatDuration(run.durationMs)}</td>
+                <td className="px-3 py-2 text-neutral-500">
+                  {run.startedAt.toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -1,61 +1,53 @@
-'use server'
+"use server";
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import { getOverviewStats } from "@/lib/queries";
 
-const pool = new pg.Pool({ 
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/qa_analytics_db?schema=public" 
-});
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-// Interface matching our Prisma Metric schema structure
-export interface DashboardMetric {
+export type DashboardMetric = {
   id: string;
   title: string;
   value: string;
   change: string;
   isPositive: boolean;
+};
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
 
-/**
- * Server Action: Fetches real-time telemetry metrics directly from the PostgreSQL database
- */
 export async function getDashboardMetrics(): Promise<DashboardMetric[]> {
-  try {
-    // 1. Fetch data from the database using Prisma Client
-    const dbMetrics = await prisma.metric.findMany({
-      orderBy: {
-        timestamp: 'desc'
-      },
-      take: 3 // Retrieve the latest 3 analytical parameters
-    });
+  const stats = await getOverviewStats();
 
-    // 2. If the database is completely empty (no seed data yet), fall back to standard base values
-    if (dbMetrics.length === 0) {
-      return [
-        { id: '1', title: 'Active Automations (DB Fallback)', value: '1,248', change: '+12%', isPositive: true },
-        { id: '2', title: 'API Response Time (DB Fallback)', value: '42ms', change: '-4%', isPositive: true },
-        { id: '3', title: 'System Error Rate (DB Fallback)', value: '0.04%', change: '+0.01%', isPositive: false },
-      ];
-    }
-
-    // 3. Map the raw database records into our cleaner dashboard data format
-    return dbMetrics.map(item => ({
-      id: item.id,
-      title: item.title,
-      value: item.value.toString(), // Convert numerical values to display strings
-      change: '+0%', // Placeholder calculation metrics
-      isPositive: true
-    }));
-
-  } catch (error) {
-    console.error('❌ Failed to fetch database metrics:', error);
-    // Return base arrays if database connectivity drops entirely
-    return [
-      { id: 'err-1', title: 'Connection State Error', value: 'Offline', change: '0%', isPositive: false }
-    ];
-  }
+  return [
+    {
+      id: "pass-rate",
+      title: "Pass rate",
+      value: `${stats.passRate.toFixed(1)}%`,
+      change: stats.passRate >= 90 ? "Healthy" : "Watch",
+      isPositive: stats.passRate >= 90,
+    },
+    {
+      id: "flaky-rate",
+      title: "Flaky rate",
+      value: `${stats.flakyRate.toFixed(1)}%`,
+      change: stats.flakyRate <= 5 ? "Stable" : "Elevated",
+      isPositive: stats.flakyRate <= 5,
+    },
+    {
+      id: "avg-duration",
+      title: "Avg run time",
+      value: formatDuration(stats.avgDurationMs),
+      change: `${stats.total} runs`,
+      isPositive: true,
+    },
+    {
+      id: "open-defects",
+      title: "Open defects",
+      value: String(stats.openDefects),
+      change: stats.failed > 0 ? `${stats.failed} failed` : "None",
+      isPositive: stats.openDefects === 0,
+    },
+  ];
 }
