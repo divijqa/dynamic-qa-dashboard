@@ -1,64 +1,48 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
-import 'dotenv/config';
+import { PrismaClient, RunStatus } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-// 1. Establish the native PostgreSQL connection pool configuration parameters
-const pool = new pg.Pool({ 
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/qa_analytics_db?schema=public" 
-});
-
-// 2. Wrap the database pool instance directly inside Prisma's driver adapter
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+const SUITES = ["checkout-e2e", "auth-suite", "payments-int", "search-e2e"];
+const STATUSES: RunStatus[] = ["PASSED", "PASSED", "PASSED", "FLAKY", "FAILED"];
+
 async function main() {
-  console.log('🌱 Initializing automated database seeding sequence...');
-
-  // 3. Clear out historical metadata entries to avoid key constraint errors
-  await prisma.metric.deleteMany({});
-  await prisma.user.deleteMany({});
-
-  // 4. Provision your core primary profile entity record
-  const coreUser = await prisma.user.create({
-    data: {
-      email: 'divij.mothe@enterprise.qa',
-      name: 'Divij Mothe',
-      role: 'ADMIN',
-    },
-  });
-
-  console.log(`👤 Baseline User profile mapped successfully: ${coreUser.email}`);
-
-  // 5. Inject realistic high-utility QA metric dataset arrays
-  const metricPayloads = [
-    { title: 'Total Selenium Suites Executed', value: 842.0 },
-    { title: 'Mean API Latency Threshold (ms)', value: 34.5 },
-    { title: 'Jenkins Agent Deployment Success Rate (%)', value: 99.8 },
-  ];
-
-  for (const payload of metricPayloads) {
-    const record = await prisma.metric.create({
-      data: {
-        title: payload.title,
-        value: payload.value,
-        status: 'ACTIVE',
-        userId: coreUser.id,
-      },
+  for (const name of SUITES) {
+    const suite = await prisma.suite.upsert({
+      where: { name },
+      update: {},
+      create: { name },
     });
-    console.log(`📊 Injected data entry vector telemetry matrix: "${record.title}" -> ${record.value}`);
+
+    const runCount = 30;
+    for (let i = 0; i < runCount; i++) {
+      const status = STATUSES[Math.floor(Math.random() * STATUSES.length)];
+      const startedAt = new Date(Date.now() - (runCount - i) * 1000 * 60 * 60 * 24);
+
+      await prisma.testRun.create({
+        data: {
+          suiteId: suite.id,
+          status,
+          durationMs: 60_000 + Math.floor(Math.random() * 300_000),
+          startedAt,
+          logs:
+            status === "PASSED"
+              ? null
+              : `Error: assertion failed in ${name} at step ${1 + Math.floor(Math.random() * 5)}`,
+        },
+      });
+    }
   }
 
-  console.log('🏁 Database seeding process completed successfully!');
+  console.log("Seed complete.");
 }
 
 main()
   .catch((e) => {
-    console.error('❌ An error occurred during database seeding execution:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
-    // 6. Safely disconnect the database socket streams
     await prisma.$disconnect();
-    await pool.end();
   });

@@ -1,27 +1,32 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String?
-  role      String    @default("USER")
-  metrics   Metric[]  
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+datasource db {
+  provider = "postgresql"
 }
 
-model Metric {
-  id          String   @id @default(uuid())
-  title       String
-  value       Float
-  status      String   @default("ACTIVE")
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  timestamp   DateTime @default(now())
+model Suite {
+  id   String    @id @default(cuid())
+  name String    @unique
+  runs TestRun[]
+}
+
+model TestRun {
+  id         String    @id @default(cuid())
+  suiteId    String
+  suite      Suite     @relation(fields: [suiteId], references: [id])
+  status     RunStatus
+  durationMs Int
+  logs       String?   @db.Text
+  startedAt  DateTime  @default(now())
+
+  @@index([suiteId, startedAt])
+  @@index([status])
+}
+
+enum RunStatus {
+  PASSED
+  FAILED
+  FLAKY
 }
