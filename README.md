@@ -190,6 +190,13 @@ export default async function OverviewPage() {
 
 **5. Add a `prisma/seed.ts`** with a handful of fake runs so `npm run dev` shows real-looking data immediately instead of an empty dashboard — first-run experience matters for a portfolio/demo project like this.
 
+# Dynamic QA Dashboard
+
+AI-powered QA analytics dashboard for test execution, regression tracking,
+and intelligent QA insights.
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://dynamic-qa-dashboard.vercel.app/)
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE) and [Apache License 2.0](LICENSE).
