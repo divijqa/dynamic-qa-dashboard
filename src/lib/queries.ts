@@ -55,3 +55,17 @@ export async function getRecentRuns(take = 10) {
     include: { suite: true },
   });
 }
+
+export async function getAllRuns() {
+  return prisma.testRun.findMany({
+    orderBy: { startedAt: "desc" },
+    include: { suite: true },
+  });
+}
+
+export async function getRunById(id: string) {
+  return prisma.testRun.findUnique({
+    where: { id },
+    include: { suite: true },
+  });
+}
