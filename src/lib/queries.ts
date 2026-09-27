@@ -69,3 +69,55 @@ export async function getRunById(id: string) {
     include: { suite: true },
   });
 }
+
+export async function getFlakySuites() {
+  const suites = await prisma.suite.findMany({
+    include: { runs: true },
+  });
+ 
+  return suites
+    .map((suite) => {
+      const total = suite.runs.length;
+      const flaky = suite.runs.filter((r) => r.status === "FLAKY").length;
+      const lastFlakyRun = suite.runs
+        .filter((r) => r.status === "FLAKY")
+        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
+ 
+      return {
+        suiteId: suite.id,
+        suiteName: suite.name,
+        totalRuns: total,
+        flakyCount: flaky,
+        flakyRate: total ? (flaky / total) * 100 : 0,
+        lastFlakyAt: lastFlakyRun?.startedAt ?? null,
+      };
+    })
+    .filter((s) => s.flakyCount > 0)
+    .sort((a, b) => b.flakyRate - a.flakyRate);
+}
+ 
+export async function getSuiteReports() {
+  const suites = await prisma.suite.findMany({
+    include: { runs: true },
+  });
+ 
+  return suites.map((suite) => {
+    const total = suite.runs.length;
+    const passed = suite.runs.filter((r) => r.status === "PASSED").length;
+    const flaky = suite.runs.filter((r) => r.status === "FLAKY").length;
+    const failed = suite.runs.filter((r) => r.status === "FAILED").length;
+    const avgDurationMs = total
+      ? suite.runs.reduce((sum, r) => sum + r.durationMs, 0) / total
+      : 0;
+ 
+    return {
+      suiteId: suite.id,
+      suiteName: suite.name,
+      totalRuns: total,
+      passRate: total ? (passed / total) * 100 : 0,
+      flakyRate: total ? (flaky / total) * 100 : 0,
+      failedCount: failed,
+      avgDurationMs,
+    };
+  });
+}

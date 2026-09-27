@@ -1,8 +1,10 @@
-# 📊 Dynamic Enterprise QA Analytics Dashboard
+# 📊 Dynamic QA Dashboard
 
-A full-stack QA analytics dashboard for tracking automated test runs, flaky-test trends, and live telemetry across teams — built on the Next.js App Router with a type-safe Prisma/PostgreSQL data layer.
+A full-stack QA analytics dashboard for tracking automated test runs, flaky-test trends, and suite-level reporting — built on the Next.js App Router with a type-safe Prisma/PostgreSQL data layer.
 
-> **Status:** Early development (v0.1) — core layout and data model in progress.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://dynamic-qa-dashboard.vercel.app/)
+
+> **Status:** This is the public demo, running on seeded sample data. The real version — with live test-report ingestion (Jenkins/Playwright/Mocha via JUnit XML) and LLM-based failure triage — is being built in a private repo.
 
 ## Tech stack
 
@@ -12,191 +14,88 @@ A full-stack QA analytics dashboard for tracking automated test runs, flaky-test
 | UI | [React](https://react.dev) | `19.2.8` |
 | Language | TypeScript | `^5` |
 | Styling | Tailwind CSS | `^4` |
-| ORM | Prisma (`@prisma/adapter-pg`) | `^7.9.1` |
-| Database | PostgreSQL via `pg` | `^8.23.0` |
-| Linting | ESLint + `eslint-config-next` | `^9` / `16.3.0` |
+| ORM | Prisma (`@prisma/adapter-pg`) | `^7.10.0` |
+| Database | PostgreSQL (Docker locally, [Neon](https://neon.com) in production) | `^8.23.0` (`pg`) |
+| Tables | [TanStack Table](https://tanstack.com/table) | `^8` |
+| Charts | [Recharts](https://recharts.org) | `^3.10.1` |
+| Deployment | [Vercel](https://vercel.com) | — |
 
-## Architectural features
+## Features
 
-- **Server Components by default** — KPI cards and run tables are read directly from Prisma in Server Components; no client JS shipped for static data.
-- **Type-safe data layer** — Prisma schema is the single source of truth for test runs, suites, and defect records.
-- **Dark-mode-first design** — layout uses CSS custom properties (not just Tailwind's `dark:` variant) so themes can be swapped without a rebuild.
+- **Overview** — pass rate, flaky rate, avg run duration, and open-defect KPI cards, plus a 30-day pass/fail trend chart
+- **Test runs** — full run history in a sortable, filterable table (by suite, by status), with a drill-down page per run showing logs
+- **Flaky tests** — suites ranked by flaky rate, worst first
+- **Reports** — per-suite summary: total runs, pass rate, flaky rate, failure count, avg duration
+
+## Architectural notes
+
+- **Server Components by default** — every page reads directly from Prisma in a Server Component; the only client boundary is the sortable table and the chart, both of which need browser interactivity.
+- **Type-safe data layer** — `Suite` → `TestRun` is the whole schema right now; deliberately kept at suite-level granularity rather than individual test cases (see status note above).
+- **Dark-mode-first design** — slate/neutral palette throughout, no light theme yet.
 
 ## Getting started
 
 ```bash
-# 1. Install dependencies
+# 1. Start a local Postgres container
+docker run --name qa-postgres-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=qa_analytics_db \
+  -p 5432:5432 \
+  -v qa-postgres-data:/var/lib/postgresql/data \
+  -d postgres
+
+# 2. Install dependencies
 npm install
 
-# 2. Configure your database
+# 3. Configure your database
 cp .env.example .env
-# set DATABASE_URL="postgresql://user:password@localhost:5432/qa_dashboard"
+# DATABASE_URL="postgresql://postgres:postgres@localhost:5432/qa_analytics_db?schema=public"
 
-# 3. Push the schema and seed sample data
+# 4. Generate the Prisma client, apply the schema, and seed sample data
+npx prisma generate
 npx prisma migrate dev
 npx prisma db seed
 
-# 4. Start the dev server
+# 5. Start the dev server
 npm run dev
 ```
-
-> ⚠️ The repo currently ships a committed `.env` — move real credentials out of version control and commit a `.env.example` with placeholder values instead (see [Code suggestions](#code-suggestions) below).
 
 ## Project structure
 
 ```
 dynamic-qa-dashboard/
 ├── prisma/
-│   ├── schema.prisma       # TestRun, Suite, Defect models
+│   ├── schema.prisma        # Suite, TestRun, RunStatus
 │   └── seed.ts
 ├── src/
+│   ├── lib/
+│   │   ├── prisma.ts        # Prisma client singleton (pg driver adapter)
+│   │   └── queries.ts       # all data-access functions
+│   ├── components/
+│   │   ├── sidebar.tsx
+│   │   ├── topbar.tsx
+│   │   ├── kpi-card.tsx
+│   │   ├── trend-chart.tsx
+│   │   └── runs-table.tsx   # TanStack Table, sortable + filterable
 │   └── app/
-│       ├── (dashboard)/
-│       │   ├── layout.tsx  # sidenav + topbar shell
-│       │   ├── page.tsx    # overview: KPIs + trend chart
-│       │   ├── runs/
-│       │   ├── flaky/
-│       │   └── reports/
-│       └── api/
+│       ├── layout.tsx       # root layout — sidebar/topbar shell
+│       ├── page.tsx         # Overview
+│       ├── actions.ts       # Server Action feeding the KPI cards
+│       ├── runs/
+│       │   ├── page.tsx     # all runs, sortable/filterable
+│       │   └── [id]/page.tsx  # single-run drill-down
+│       ├── flaky/page.tsx   # flaky-suite ranking
+│       └── reports/page.tsx # per-suite summary
 └── public/
 ```
-```
-dynamic-qa-dashboard/
-├── .env.example                  # new
-├── .gitignore                    # existing — add .env to it if not already
-├── AGENTS.md                     # existing
-├── CLAUDE.md                     # existing
-├── README.md                     # updated (from earlier in this chat)
-├── eslint.config.mjs             # existing
-├── next.config.ts                # existing
-├── package.json                  # existing — add "recharts" dependency
-├── package-lock.json             # existing — will update after npm install
-├── postcss.config.mjs            # existing
-├── prisma.config.ts              # existing
-├── tsconfig.json                 # existing — verify "@/*" path alias maps to "src/*"
-│
-├── prisma/
-│   ├── schema.prisma             # new/replaced — Suite, TestRun, RunStatus
-│   └── seed.ts                   # new
-│
-├── public/                       # existing
-│
-└── src/
-    ├── lib/
-    │   ├── prisma.ts             # new — Prisma client singleton (pg adapter)
-    │   └── queries.ts            # new — getOverviewStats, getTrend, getRecentRuns
-    │
-    ├── components/
-    │   ├── sidebar.tsx           # new
-    │   ├── topbar.tsx            # new
-    │   ├── kpi-card.tsx          # new
-    │   └── trend-chart.tsx       # new — client component (recharts)
-    │
-    └── app/
-        ├── layout.tsx            # existing — root layout (html/body), keep as-is
-        ├── page.tsx              # existing — resolve conflict, see note below
-        ├── globals.css           # existing
-        │
-        └── (dashboard)/
-            ├── layout.tsx        # new — sidebar/topbar shell
-            └── page.tsx          # new — overview: KPIs + trend + runs table
-```
 
-## Design roadmap
+## Roadmap
 
-### v0.1 — Skeleton dashboard *(current)*
-- Fixed left sidenav (Overview / Test Runs / Flaky Tests / Reports)
-- Topbar with environment switcher + search
-- 4-up KPI row: pass rate, flaky rate, avg run duration, open defects
-- Single pass/fail trend chart (last 30 runs) via Recharts or Tremor
-- Recent runs table (suite, status, duration, timestamp)
-
-### v0.2 — Live telemetry
-- Real-time run status via `/api/runs/stream` (Route Handler + SSE, or polling)
-- Filterable, sortable run table — TanStack Table pairs well with RSC + Server Actions
-- Per-run drill-down page with logs and stack traces
-
-### v0.3 — Enterprise polish
-- RBAC (viewer / QA lead / admin) enforced in middleware
-- Org/project switcher for multi-team use
-- Saved views and regression alert rules (Slack/email webhook)
-- Brandable theming via CSS variables, light/dark toggle
-
-## Code suggestions
-
-**1. Don't commit `.env`.** Add it to `.gitignore`, commit a `.env.example` instead:
-```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/qa_dashboard"
-```
-
-**2. Route group for the dashboard shell** — keeps the sidenav/topbar in one layout instead of repeating it per page:
-```tsx
-// src/app/(dashboard)/layout.tsx
-import { Sidebar } from "@/components/sidebar";
-import { Topbar } from "@/components/topbar";
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[180px_1fr] min-h-screen">
-      <Sidebar />
-      <div className="flex flex-col">
-        <Topbar />
-        <main className="p-6">{children}</main>
-      </div>
-    </div>
-  );
-}
-```
-
-**3. Prisma schema starting point** for the models the dashboard needs:
-```prisma
-model Suite {
-  id      String    @id @default(cuid())
-  name    String
-  runs    TestRun[]
-}
-
-model TestRun {
-  id         String   @id @default(cuid())
-  suiteId    String
-  suite      Suite    @relation(fields: [suiteId], references: [id])
-  status     RunStatus
-  durationMs Int
-  startedAt  DateTime @default(now())
-}
-
-enum RunStatus {
-  PASSED
-  FAILED
-  FLAKY
-}
-```
-
-**4. KPI cards as a Server Component**, no client boundary needed:
-```tsx
-// src/app/(dashboard)/page.tsx
-import { prisma } from "@/lib/prisma";
-
-export default async function OverviewPage() {
-  const [total, passed] = await Promise.all([
-    prisma.testRun.count(),
-    prisma.testRun.count({ where: { status: "PASSED" } }),
-  ]);
-  const passRate = total ? ((passed / total) * 100).toFixed(1) : "0.0";
-
-  return <KpiCard label="Pass rate" value={`${passRate}%`} />;
-}
-```
-
-**5. Add a `prisma/seed.ts`** with a handful of fake runs so `npm run dev` shows real-looking data immediately instead of an empty dashboard — first-run experience matters for a portfolio/demo project like this.
-
-# Dynamic QA Dashboard
-
-AI-powered QA analytics dashboard for test execution, regression tracking,
-and intelligent QA insights.
-
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://dynamic-qa-dashboard.vercel.app/)
+- [x] **v0.1** — dashboard shell, KPI cards, trend chart, recent-runs table
+- [x] **v0.2** — full runs table with sort/filter, per-run drill-down, flaky tests page, reports page
+- [ ] **v1 (private repo)** — Secure ingestion endpoints, Universal JUnit XML Ingestion API (standardized for Jenkins, Playwright, and Mocha pipelines) paired with an isolated LLM inference agent for autonomous failure classification. Multi-tenant organization support and granular RBAC for enterprise engineering teams.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE) and [Apache License 2.0](LICENSE).
+This project is dual-licensed under both the MIT License [MIT](LICENSE) and the Apache License 2.0 [Apache 2.0](LICENSE):
