@@ -4,7 +4,7 @@ A full-stack QA analytics dashboard for tracking automated test runs, flaky-test
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://dynamic-qa-dashboard.vercel.app/)
 
-> **Status:** This is the public demo, running on seeded sample data. The real version — with live test-report ingestion (Jenkins/Playwright/Mocha via JUnit XML) and LLM-based failure triage — is being built in a private repo.
+> **Status:** This is the public demo, running on seeded sample data. The real version — with live test-report ingestion (Jenkins/Playwright/Mocha via JUnit XML) and LLM-based failure triage — is currently under active development.
 
 ## Tech stack
 
@@ -94,7 +94,7 @@ dynamic-qa-dashboard/
 
 - [x] **v0.1** — dashboard shell, KPI cards, trend chart, recent-runs table
 - [x] **v0.2** — full runs table with sort/filter, per-run drill-down, flaky tests page, reports page
-- [ ] **v1 (private repo)** — Secure ingestion endpoints, Universal JUnit XML Ingestion API (standardized for Jenkins, Playwright, and Mocha pipelines) paired with an isolated LLM inference agent for autonomous failure classification. Multi-tenant organization support and granular RBAC for enterprise engineering teams.
+- [ ] **v1 (private repo)** — Secure ingestion endpoints, Universal JUnit XML Ingestion API (standardized for Jenkins, Playwright, and Mocha pipelines) paired with an isolated LLM inference agent for failure triage
 
 ## License
 
