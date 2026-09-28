@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
+// NOTE: If you see "Property 'defect' does not exist on type 'PrismaClient'",
+// run `npx prisma generate` after ensuring your `schema.prisma` defines a
+// `Defect` model, then restart the TypeScript server.
+
 export async function getOverviewStats() {
   const [total, passed, flaky, failed, durationAgg, openDefects] =
     await Promise.all([
@@ -8,7 +12,7 @@ export async function getOverviewStats() {
       prisma.testRun.count({ where: { status: "FLAKY" } }),
       prisma.testRun.count({ where: { status: "FAILED" } }),
       prisma.testRun.aggregate({ _avg: { durationMs: true } }),
-      prisma.testRun.count({ where: { status: "FAILED" } }), // placeholder until a Defect model exists
+      (prisma as any).defect.count({ where: { status: "OPEN" } }),
     ]);
 
   return {
@@ -74,7 +78,7 @@ export async function getFlakySuites() {
   const suites = await prisma.suite.findMany({
     include: { runs: true },
   });
- 
+
   return suites
     .map((suite) => {
       const total = suite.runs.length;
@@ -82,7 +86,7 @@ export async function getFlakySuites() {
       const lastFlakyRun = suite.runs
         .filter((r) => r.status === "FLAKY")
         .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
- 
+
       return {
         suiteId: suite.id,
         suiteName: suite.name,
@@ -95,29 +99,79 @@ export async function getFlakySuites() {
     .filter((s) => s.flakyCount > 0)
     .sort((a, b) => b.flakyRate - a.flakyRate);
 }
- 
+
 export async function getSuiteReports() {
   const suites = await prisma.suite.findMany({
     include: { runs: true },
   });
- 
-  return suites.map((suite) => {
-    const total = suite.runs.length;
-    const passed = suite.runs.filter((r) => r.status === "PASSED").length;
-    const flaky = suite.runs.filter((r) => r.status === "FLAKY").length;
-    const failed = suite.runs.filter((r) => r.status === "FAILED").length;
-    const avgDurationMs = total
-      ? suite.runs.reduce((sum, r) => sum + r.durationMs, 0) / total
-      : 0;
- 
-    return {
-      suiteId: suite.id,
-      suiteName: suite.name,
-      totalRuns: total,
-      passRate: total ? (passed / total) * 100 : 0,
-      flakyRate: total ? (flaky / total) * 100 : 0,
-      failedCount: failed,
-      avgDurationMs,
-    };
+
+  return suites
+    .map((suite) => {
+      const total = suite.runs.length;
+      const passed = suite.runs.filter((r) => r.status === "PASSED").length;
+      const flaky = suite.runs.filter((r) => r.status === "FLAKY").length;
+      const failed = suite.runs.filter((r) => r.status === "FAILED").length;
+      const avgDurationMs = total
+        ? suite.runs.reduce((sum, r) => sum + r.durationMs, 0) / total
+        : 0;
+
+      return {
+        suiteId: suite.id,
+        suiteName: suite.name,
+        totalRuns: total,
+        passRate: total ? (passed / total) * 100 : 0,
+        flakyRate: total ? (flaky / total) * 100 : 0,
+        failedCount: failed,
+        avgDurationMs,
+      };
+    })
+    .filter((report) => report.totalRuns > 0);
+}
+
+export async function getDefectStats() {
+  const [open, closed] = await Promise.all([
+    (prisma as any).defect.count({ where: { status: "OPEN" } }),
+    (prisma as any).defect.count({ where: { status: "CLOSED" } }),
+  ]);
+
+  return { open, closed, total: open + closed };
+}
+
+export async function getDefects() {
+  return (prisma as any).defect.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    include: { suite: true },
   });
+}
+
+export async function getAutomationBreakdown() {
+  const suites = await (prisma.suite.findMany as any)({
+    select: { automationStatus: true, testCases: true },
+  });
+
+  const totals: Record<"AUTOMATED" | "IN_PROGRESS" | "MANUAL", number> = {
+    AUTOMATED: 0,
+    IN_PROGRESS: 0,
+    MANUAL: 0,
+  };
+  for (const suite of suites) {
+    const status = (suite as typeof suite & { automationStatus: string })
+      .automationStatus as
+      | "AUTOMATED"
+      | "IN_PROGRESS"
+      | "MANUAL";
+    totals[status] += suite.testCases;
+  }
+
+  const totalCases = totals.AUTOMATED + totals.IN_PROGRESS + totals.MANUAL;
+
+  return {
+    data: [
+      { name: "Automated", value: totals.AUTOMATED },
+      { name: "In progress", value: totals.IN_PROGRESS },
+      { name: "Manual", value: totals.MANUAL },
+    ],
+    coverage: totalCases ? (totals.AUTOMATED / totalCases) * 100 : 0,
+    totalCases,
+  };
 }

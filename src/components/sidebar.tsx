@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Overview" },
   { href: "/runs", label: "Test runs" },
   { href: "/flaky", label: "Flaky tests" },
+  { href: "/defects", label: "Defects" },
   { href: "/reports", label: "Reports" },
 ] as const;
 
