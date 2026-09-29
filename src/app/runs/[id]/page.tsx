@@ -1,3 +1,9 @@
+/**
+ * Copyright 2026 Divij Mothe.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRunById } from "@/lib/queries";

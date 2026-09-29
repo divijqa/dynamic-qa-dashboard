@@ -1,3 +1,9 @@
+/**
+ * Copyright 2026 Divij Mothe.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 import { getSuiteReports } from "@/lib/queries";
 
 function formatDuration(ms: number) {

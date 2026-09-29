@@ -1,3 +1,9 @@
+/**
+ * Copyright 2026 Divij Mothe.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 export function Topbar() {
   return (
     <header className="flex items-center justify-between border-b border-white/10 px-6 py-3">

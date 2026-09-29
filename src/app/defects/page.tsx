@@ -1,3 +1,9 @@
+/**
+ * Copyright 2026 Divij Mothe.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 import { getDefects, getDefectStats } from "@/lib/queries";
 
 type DefectSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
