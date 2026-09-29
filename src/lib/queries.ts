@@ -1,3 +1,9 @@
+/**
+ * Copyright 2026 Divij Mothe.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 import { prisma } from "@/lib/prisma";
 
 // NOTE: If you see "Property 'defect' does not exist on type 'PrismaClient'",

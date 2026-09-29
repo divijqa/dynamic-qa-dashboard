@@ -96,6 +96,16 @@ dynamic-qa-dashboard/
 - [x] **v0.2** — full runs table with sort/filter, per-run drill-down, flaky tests page, reports page
 - [ ] **v1 (private repo)** — Secure ingestion endpoints, Universal JUnit XML Ingestion API (standardized for Jenkins, Playwright, and Mocha pipelines) paired with an isolated LLM inference agent for failure triage
 
+## Attribution
+
+Dynamic QA Dashboard is an original project by **Divij Mothe**.
+
+The repository is provided as a public demonstration of QA automation analytics, test execution telemetry, and quality engineering architecture.
+
+Please retain the project's copyright and license notices when using or redistributing the code, in accordance with the applicable repository license.
+
+The public repository represents the open/demo portion of a broader QA engineering architecture. Enterprise-specific implementations, integrations, and proprietary components are maintained separately in private repositories.
+
 ## License
 
 This project is dual-licensed under both the MIT License [MIT](LICENSE) and the Apache License 2.0 [Apache 2.0](LICENSE):
